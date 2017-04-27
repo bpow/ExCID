@@ -5,6 +5,15 @@ use strict;
 my $annotated_index = $ARGV[0];
 my $HGNC = $ARGV[1];
 
+my %words_to_genes = (); # not a perfect index, but will do the same as "grep -w"
+open(my $hgnc_fh, "<$HGNC") or die $!;
+while (my $line = <$hgnc_fh>) {
+    chomp $line;
+    my @row = split(/[\s,]/, $line);
+    my $gene = shift @row;
+    map { $words_to_genes{$_} = $gene } @row;
+}
+close $hgnc_fh or die $!;
 
 open(my $fh,"<$annotated_index") or die $!;
 
@@ -15,22 +24,9 @@ while (my $line = <$fh>) {
     
     my ($chr,$start,$Stop,$transcript_ID) = split("\t",$line);
     
-    my @grep = `grep -w "$transcript_ID" $HGNC `;
-    
-    if (scalar(@grep) == 1) {
-        my @tmp = split("\t",$grep[0]);
-        my $gene_name = $tmp[0];
-        print "$chr\t$start\t$Stop\t$transcript_ID\t$gene_name\n";
-    }else{
-        #my @tmp = split("-",$transcript_ID);
-        #my $gene_name = "MIR";
-        #for(my $i = 2; $i < scalar(@tmp); $i++){
-        #    $gene_name.=uc($tmp[$i]);
-        #}
-        print "$chr\t$start\t$Stop\t$transcript_ID\t.\n";
-        #print STDERR "$chr\t$start\t$Stop\t$gene_name\t$transcript_ID\n";
-    }
-    
+    my $gene_name = $words_to_genes{$transcript_ID} || '.';
+
+    print "$chr\t$start\t$Stop\t$transcript_ID\t$gene_name\n";
 }
 
 close($fh);
